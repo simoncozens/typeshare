@@ -1,3 +1,4 @@
+use log::debug;
 use quote::ToTokens;
 use std::collections::BTreeSet;
 use std::fmt::Display;
@@ -286,6 +287,8 @@ pub enum SpecialRustType {
     I32,
     /// Represents `i64`
     I64,
+    /// Represents `u128`
+    U128,
     /// Represents `u8`
     U8,
     /// Represents `u16`
@@ -342,6 +345,7 @@ impl TryFrom<&syn::Type> for RustType {
     type Error = ParseErrorWithSpan;
 
     fn try_from(ty: &syn::Type) -> Result<Self, Self::Error> {
+        debug!("Parsing type: {}", ty.to_token_stream());
         Ok(match ty {
             syn::Type::Tuple(tuple) if tuple.elems.iter().count() == 0 => {
                 Self::Special(SpecialRustType::Unit)
@@ -395,14 +399,14 @@ impl TryFrom<&syn::Type> for RustType {
                     "u16" => Self::Special(SpecialRustType::U16),
                     "u32" => Self::Special(SpecialRustType::U32),
                     "U53" => Self::Special(SpecialRustType::U53),
-                    "u64" | "i64" | "usize" | "isize" => {
-                        return Err(
-                            RustTypeParseError::UnsupportedType(vec![id]).with_span(path.span())
-                        );
-                    }
+                    "u64" => Self::Special(SpecialRustType::U64),
+                    "usize" => Self::Special(SpecialRustType::USize),
+                    "u128" => Self::Special(SpecialRustType::U128),
                     "i8" => Self::Special(SpecialRustType::I8),
                     "i16" => Self::Special(SpecialRustType::I16),
                     "i32" => Self::Special(SpecialRustType::I32),
+                    "i64" => Self::Special(SpecialRustType::I64),
+                    "isize" => Self::Special(SpecialRustType::ISize),
                     "I54" => Self::Special(SpecialRustType::I54),
                     "f32" => Self::Special(SpecialRustType::F32),
                     "f64" => Self::Special(SpecialRustType::F64),
@@ -595,6 +599,7 @@ impl SpecialRustType {
             | Self::F32
             | Self::F64
             | Self::I54
+            | Self::U128
             | Self::U53 => ty == self.id(),
         }
     }
@@ -626,6 +631,7 @@ impl SpecialRustType {
             Self::USize => "usize",
             Self::U53 => "U53",
             Self::I54 => "I54",
+            Self::U128 => "u128",
         }
     }
 
@@ -651,6 +657,7 @@ impl SpecialRustType {
             | Self::U16
             | Self::U32
             | Self::U64
+            | Self::U128
             | Self::ISize
             | Self::USize
             | Self::Bool
@@ -698,6 +705,8 @@ pub enum RustEnum {
         tag_key: String,
         /// The parsed value of the `#[serde(content = "...")]` attribute
         content_key: String,
+        /// Whether this enum has `#[serde(untagged)]`
+        untagged: bool,
         /// Shared context for this enum.
         shared: RustEnumShared,
     },

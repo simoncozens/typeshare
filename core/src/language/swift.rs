@@ -221,6 +221,7 @@ impl Language for Swift {
                     special_ty.to_string(),
                 ))
             }
+            SpecialRustType::U128 => "UInt128".into(),
         })
     }
 
@@ -587,6 +588,7 @@ impl Swift {
                 tag_key,
                 content_key,
                 shared,
+                ..
             } => {
                 let generics = &shared.generic_types;
                 for v in &shared.variants {
