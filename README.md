@@ -27,7 +27,8 @@ your cross-language codebase in sync. With automatic implementation for serializ
 
 This is a fork of the upstream 1Password Typeshare repository. The differences are:
 
-* Field type overrides are supported (merged PR [#281](https://github.com/1Password/typeshare/pull/281/))
+* ~~Field type overrides are supported (merged PR [#281](https://github.com/1Password/typeshare/pull/281/))~~ (Now merged
+upstream)
 * Tuple types are supported (merged PR [#282](https://github.com/1Password/typeshare/pull/282/))
 * Untagged enums are supported (merged PR [#278](https://github.com/1Password/typeshare/pull/278/))
 
