@@ -118,6 +118,7 @@ impl Language for Scala {
                     special_ty.to_string(),
                 ))
             }
+            SpecialRustType::U128 => "BigInt".into(),
         })
     }
 
@@ -493,6 +494,7 @@ impl Scala {
                 }
                 RustType::Special(_) => vec![ty.clone()],
                 RustType::Simple { .. } => vec![],
+                RustType::Unrepresentable { .. } => vec![],
             })
             .any(|ty| {
                 matches!(

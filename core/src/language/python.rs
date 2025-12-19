@@ -57,6 +57,7 @@ fn collect_generics_for_variant(variant_type: &RustType, generics: &[String]) ->
             }
             _ => {}
         },
+        RustType::Unrepresentable { .. } => {}
     }
     // Remove any duplicates
     // E.g. Foo(HashMap<T, T>) should only produce a single type var
@@ -257,6 +258,7 @@ impl Language for Python {
             | SpecialRustType::U53
             | SpecialRustType::U64
             | SpecialRustType::I64
+            | SpecialRustType::U128
             | SpecialRustType::ISize
             | SpecialRustType::USize => Ok("int".into()),
             SpecialRustType::F32 | SpecialRustType::F64 => Ok("float".into()),
@@ -383,6 +385,7 @@ impl Language for Python {
                 tag_key,
                 content_key,
                 shared,
+                untagged,
                 ..
             } => {
                 self.write_algebraic_enum(
@@ -392,6 +395,7 @@ impl Language for Python {
                     shared,
                     w,
                     &make_anonymous_struct_name,
+                    untagged,
                 )?;
             }
         };
@@ -616,6 +620,7 @@ impl Python {
         shared: &RustEnumShared,
         w: &mut dyn Write,
         make_struct_name: &dyn Fn(&str) -> String,
+        untagged: &bool,
     ) -> std::io::Result<()> {
         shared
             .generic_types
@@ -623,6 +628,27 @@ impl Python {
             .cloned()
             .for_each(|v| self.add_type_var(v));
         self.add_import("pydantic".to_string(), "BaseModel".to_string());
+
+        // If this is an untagged enum, we don't need to write the "types" class;
+        // we'll just export it as a type.
+        if *untagged {
+            let mut union_members = Vec::new();
+            // write each of the enum variant as a class:
+            for variant in &shared.variants {
+                let variant_class_name = variant.shared().id.original.clone();
+                union_members.push(variant_class_name);
+            }
+
+            self.write_comments(w, false, &shared.comments, 0)?;
+            if union_members.len() == 1 {
+                writeln!(w, "{enum_name} = {}", union_members[0])?;
+            } else {
+                self.add_import("typing".to_string(), "Union".to_string());
+                writeln!(w, "{enum_name} = Union[{}]", union_members.join(", "))?;
+            }
+            return Ok(());
+        }
+
         // all the types and class names for the enum variants in tuple
         // (type_name, class_name)
         let all_enum_variants_name = shared

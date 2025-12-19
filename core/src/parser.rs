@@ -322,6 +322,7 @@ pub(crate) fn parse_enum(
     // Grab the `#[serde(tag = "...", content = "...")]` values if they exist
     let maybe_tag_key = get_tag_key(&e.attrs);
     let maybe_content_key = get_content_key(&e.attrs);
+    let is_untagged = serde_attr(&e.attrs, "untagged");
 
     // Parse all of the enum's variants
     let variants = e
@@ -377,22 +378,13 @@ pub(crate) fn parse_enum(
     } else {
         // At least one enum variant is either a tuple or an anonymous struct
 
-        let tag_key = maybe_tag_key.ok_or_else(|| {
-            ParseError::SerdeTagRequired {
-                enum_ident: original_enum_ident.clone(),
-            }
-            .with_span(e.span())
-        })?;
-        let content_key = maybe_content_key.ok_or_else(|| {
-            ParseError::SerdeContentRequired {
-                enum_ident: original_enum_ident.clone(),
-            }
-            .with_span(e.span())
-        })?;
+        let tag_key = maybe_tag_key.unwrap_or_default();
+        let content_key = maybe_content_key.unwrap_or_default();
 
         Ok(RustItem::Enum(RustEnum::Algebraic {
             tag_key,
             content_key,
+            untagged: is_untagged,
             shared,
         }))
     }
